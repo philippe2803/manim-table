@@ -44,6 +44,15 @@ class Cell(VGroup):
         self.is_header = is_header
         self.show_border = show_border
         
+        # Create invisible bounding box to enforce dimensions
+        self.invisible_box = Rectangle(
+            width=width,
+            height=height,
+            stroke_width=0,
+            fill_opacity=0,
+        )
+        self.add(self.invisible_box)
+        
         # Create text
         stroke_width = 2 if is_header else 0.5
         if is_header:
@@ -153,6 +162,17 @@ class Cell(VGroup):
             new_width: The new width
         """
         self.cell_width = new_width
+        
+        # Resize invisible box
+        if hasattr(self, 'invisible_box'):
+            self.remove(self.invisible_box)
+            self.invisible_box = Rectangle(
+                width=new_width,
+                height=self.cell_height,
+                stroke_width=0,
+                fill_opacity=0,
+            )
+            self.add_to_back(self.invisible_box)
         
         # Recreate border with new dimensions
         if self.border is not None:
