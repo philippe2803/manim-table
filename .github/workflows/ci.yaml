@@ -6,7 +6,6 @@ on:
   pull_request:
     branches: [ "**" ]
 
-
 jobs:
   Quality:
     runs-on: ubuntu-latest
@@ -44,7 +43,7 @@ jobs:
     - name: Test
       run: xvfb-run --auto-servernum poetry run pytest -v
 
-  Release:
+  Build_and_Release:
     needs: Quality
     if: |
       github.event_name == 'push' && 
@@ -53,8 +52,9 @@ jobs:
     runs-on: ubuntu-latest
     concurrency: release
     permissions:
-      id-token: write
       contents: write
+    outputs:
+      released: ${{ steps.release-status.outputs.released }}
 
     steps:
       - uses: actions/setup-python@v3
@@ -85,7 +85,7 @@ jobs:
           fi
 
       - if: steps.release-status.outputs.released == 'true'
-        name: Release to GitHub
+        name: Release and Build
         id: github-release
         env:
           GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -93,10 +93,35 @@ jobs:
           semantic-release version
           git fetch --tags
           poetry build
+          
+          # Get the latest tag to upload release assets
+          TAG=$(git describe --tags --abbrev=0)
+          
           for file in ./dist/**
-            do gh release upload "${{steps.release-status.outputs.tag}}" $file
+            do gh release upload "$TAG" $file
           done
 
       - if: steps.release-status.outputs.released == 'true'
-        name: Release to PyPI
+        name: Upload distribution artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+  Publish_PyPI:
+    needs: Build_and_Release
+    if: needs.Build_and_Release.outputs.released == 'true'
+    runs-on: ubuntu-latest
+    environment: pypi
+    permissions:
+      id-token: write
+    
+    steps:
+      - name: Download distribution artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: python-package-distributions
+          path: dist/
+
+      - name: Publish distribution to PyPI
         uses: pypa/gh-action-pypi-publish@release/v1
