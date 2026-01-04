@@ -3,7 +3,7 @@ Example scenes demonstrating the manim_table database animation extension.
 
 Run with:
     cd /Users/philippe.oger/PersoProjects/manimal
-    manimgl manim_table/examples.py TableDemo -o
+    manimgl tests/scenes_tests.py TableDemo -o
 """
 
 from manimlib import Scene, Write, FadeOut, FadeIn, FlashAround, AnimationGroup, ORIGIN, LEFT, RIGHT, UP, DOWN, UL, ReplacementTransform, VGroup, RED, GREEN, BLUE, YELLOW, WHITE, GREY
