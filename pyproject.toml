@@ -9,7 +9,8 @@ authors = [
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "manimgl (>=1.7.2,<2.0.0)"
+    "manimgl (>=1.7.2,<2.0.0)",
+    "setuptools"
 ]
 
 
