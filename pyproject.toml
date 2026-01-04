@@ -1,0 +1,18 @@
+[project]
+name = "manim-table"
+version = "0.1.0"
+description = ""
+packages = [{include = "manim_table"}]
+authors = [
+    {name = "phil.oger@gmail.com"}
+]
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "manimgl (>=1.7.2,<2.0.0)"
+]
+
+
+[build-system]
+requires = ["poetry-core>=2.0.0,<3.0.0"]
+build-backend = "poetry.core.masonry.api"
