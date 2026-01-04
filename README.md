@@ -4,7 +4,11 @@ A simple library to create and animate tables in ManimGL.
 
 ## Installation
 
-This library will soon be available on PyPI. You will be able to install it using pip or poetry.
+You can install the library via pip:
+
+```bash
+pip install manim-table
+```
 
 ## Usage
 
