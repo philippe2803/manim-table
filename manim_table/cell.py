@@ -1,8 +1,5 @@
 """
 Cell - A single table cell with optional border.
-
-Note: manimlib uses wildcard imports pattern. We must exec() the import
-to populate globals, then access the classes from there.
 """
 
 # manimlib requires wildcard import to populate namespace
