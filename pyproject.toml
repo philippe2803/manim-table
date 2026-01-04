@@ -23,16 +23,17 @@ build-backend = "poetry.core.masonry.api"
 
 
 [tool.semantic_release]
-version_toml = [
-    "pyproject.toml:project.version"
-]
-branch = "main"
-upload_to_PyPI = true
-upload_to_release = true
+version_toml = [ "pyproject.toml:project.version" ]
 major_on_zero = false
 build_command = "pip install poetry && poetry build"
 commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
+commit_parser = "angular"
 
+[tool.semantic_release.branches.main]
+match = "(main|master)"
+
+[tool.semantic_release.publish]
+upload_to_vcs_release = true
 
 [tool.semantic_release.commit_parser_options]
 allowed_tags = [
