@@ -1,6 +1,6 @@
 [project]
 name = "manim-table"
-version = "1.0.0"
+version = "0.1.0"
 description = ""
 packages = [{include = "manim_table"}]
 authors = [
@@ -29,6 +29,7 @@ version_toml = [
 branch = "main"
 upload_to_PyPI = true
 upload_to_release = true
+major_on_zero = false
 build_command = "pip install poetry && poetry build"
 commit_author = "github-actions[bot] <41898282+github-actions[bot]@users.noreply.github.com>"
 
