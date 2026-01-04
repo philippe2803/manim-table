@@ -1,6 +1,6 @@
 [project]
 name = "manim-table"
-version = "1.0.0"
+version = "1.0.1"
 description = ""
 packages = [{include = "manim_table"}]
 authors = [
