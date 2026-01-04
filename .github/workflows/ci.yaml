@@ -1,0 +1,102 @@
+name: CI
+
+on:
+  push:
+    branches: [ "**" ]
+  pull_request:
+    branches: [ "**" ]
+
+
+jobs:
+  Quality:
+    runs-on: ubuntu-latest
+    strategy:
+        fail-fast: true
+        matrix:
+          python-version: ["3.12"]
+
+    steps:
+    - uses: actions/checkout@v3
+
+    - name: Install system dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential python3-dev libcairo2-dev libpango1.0-dev ffmpeg pkg-config xvfb libgl1-mesa-dev mesa-utils libgl1
+
+    - uses: actions/setup-python@v3
+      with:
+        python-version: ${{matrix.python-version}}
+
+    - name: Install Python Poetry
+      uses: abatilo/actions-poetry@v2.3.0
+
+    - name: Configure poetry
+      shell: bash
+      run: python -m poetry config virtualenvs.in-project true
+
+    - name: View poetry version
+      run: poetry --version
+
+    - name: Install dependencies
+      run: |
+        python -m poetry install
+
+    - name: Test
+      run: xvfb-run --auto-servernum poetry run pytest -v
+
+  Release:
+    needs: Quality
+    if: |
+      github.event_name == 'push' && 
+      github.ref == 'refs/heads/main' && 
+      !contains ( github.event.head_commit.message, 'chore(release)' )
+    runs-on: ubuntu-latest
+    concurrency: release
+    permissions:
+      id-token: write
+      contents: write
+
+    steps:
+      - uses: actions/setup-python@v3
+        with:
+          python-version: 3.12
+
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install Python Poetry
+        uses: abatilo/actions-poetry@v2.3.0
+
+      - name: Check release status
+        id: release-status
+        shell: bash
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          pip install python-semantic-release
+          if semantic-release --noop --strict version
+          then
+            echo "released=true" >> $GITHUB_OUTPUT
+            echo "Releasing new version."
+          else
+            echo "released=false" >> $GITHUB_OUTPUT
+            echo "Skipping release steps."
+          fi
+
+      - if: steps.release-status.outputs.released == 'true'
+        name: Release to GitHub
+        id: github-release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          semantic-release version
+          git fetch --tags
+          poetry build
+          for file in ./dist/**
+            do gh release upload "${{steps.release-status.outputs.tag}}" $file
+          done
+
+      - if: steps.release-status.outputs.released == 'true'
+        name: Release to PyPI
+        uses: pypa/gh-action-pypi-publish@release/v1
