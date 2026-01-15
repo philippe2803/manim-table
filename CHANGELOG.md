@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.0 (2026-01-15)
+
+### Features
+
+- Color preservation after resizing
+  ([`e8433e3`](https://github.com/philippe2803/manim-table/commit/e8433e3aa69bac5da7514e53282844c56d9c99d9))
+
+
 ## v1.0.1 (2026-01-04)
 
 ### Bug Fixes
