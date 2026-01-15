@@ -129,34 +129,33 @@ def add_row(self, values: List[str]) -> Tuple[Row, List]
 
 **Returns:** `(new_row, animations)`
 - `new_row`: The created Row object.
-- `animations`: List of `FadeIn` animations.
+- `animations`: List of animations (resize transforms + FadeIn for new cells).
 
 **Example:**
 ```python
 new_row, anims = table.add_row(["New", "Entry"])
-self.play(*anims)
+self.play(AnimationGroup(*anims, lag_ratio=0.05))
 ```
 
 #### `delete_row`
 
-Delete a row from the table (animates shifting subsequent rows).
+Delete a row from the table (animates fading out, shifting, and resizing).
 
 ```python
-def delete_row(self, index: int) -> Tuple[Row, List, List]
+def delete_row(self, index: int) -> Tuple[Row, List]
 ```
 
 **Arguments:**
 - `index`: Row index to delete (1-indexed; cannot delete header).
 
-**Returns:** `(deleted_row, shift_animations, resize_animations)`
+**Returns:** `(deleted_row, animations)`
+- `deleted_row`: The deleted Row object.
+- `animations`: List of animations (FadeOut + shift + resize).
 
 **Example:**
 ```python
-deleted, shift, resize = table.delete_row(1)
-self.play(FadeOut(deleted))
-self.play(*shift)
-if resize:
-    self.play(*resize)
+deleted, anims = table.delete_row(1)
+self.play(AnimationGroup(*anims, lag_ratio=0.05))
 ```
 
 #### `add_column`

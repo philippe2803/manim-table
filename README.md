@@ -39,16 +39,12 @@ You can add or remove rows and columns with animations.
 
 ```python
 # Add a new row
-new_row, animations = table.add_row(["Charlie", "35", "London"])
-self.play(*animations)
+new_row, anims = table.add_row(["Charlie", "35", "London"])
+self.play(AnimationGroup(*anims, lag_ratio=0.05))
 
 # Delete a row (index starts at 1 for data rows)
-deleted_row, shift_anims, resize_anims = table.delete_row(1)
-
-self.play(FadeOut(deleted_row))
-self.play(*shift_anims)
-if resize_anims:
-    self.play(*resize_anims)
+deleted_row, anims = table.delete_row(1)
+self.play(AnimationGroup(*anims, lag_ratio=0.05))
 ```
 
 ### Styling

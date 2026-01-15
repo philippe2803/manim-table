@@ -1,15 +1,11 @@
 """
-Example scenes demonstrating the manim_table database animation extension.
-
-Run with:
-    cd /Users/philippe.oger/PersoProjects/manimal
-    manimgl tests/scenes_tests.py TableDemo -o
+Example scenes demonstrating the manimal database animation extension.
 """
 
 from manimlib import Scene, Write, FadeOut, FadeIn, FlashAround, AnimationGroup, ORIGIN, LEFT, RIGHT, UP, DOWN, UL, ReplacementTransform, VGroup, RED, GREEN, BLUE, YELLOW, WHITE, GREY
 
-# Import from the manim_table package
-from manim_table import Table
+# Import from the manimal package
+from manimal import Table
 
 
 class TableDemo(Scene):
@@ -21,9 +17,9 @@ class TableDemo(Scene):
         # Create a table from data (first row is header)
         table = Table([
             ["first_name", "last_name", "age"],
-            ["John", "Doe", "34"],
-            ["Jane", "Doe", "32"],
-            ["Emily", "Doe", "8"],
+            ["PhilippeMarcelClaudeOger", "Oger", "26"],
+            ["Renata", "Oger", "25"],
+            ["Vera", "Oger", "10"],
         ])
         table.move_to(ORIGIN)
         
@@ -56,19 +52,19 @@ class TableDemo(Scene):
         self.wait(0.5)
         
         # Add a new row with animation
-        new_row, anims = table.add_row(["Alice", "Smith", "30"])
-        self.play(AnimationGroup(*anims, lag_ratio=0.05))
+        new_row, animations = table.add_row(["Alice", "Smith", "30"])
+        self.play(AnimationGroup(*animations, lag_ratio=0.2))
         self.wait(1)
         
-        # Delete row 1 (John) with animation - this will trigger column resize
+        # Delete row 1 (PhilippeMarcelClaudeOger) with animation - this will trigger column resize
         deleted_row, anims = table.delete_row(1)
         self.play(AnimationGroup(*anims, lag_ratio=0.05))
         self.wait(1)
         
-        # Change a cell value with animation (Jane's age: 32 -> 33)
-        cell = table.get_cell(1, 2)  # First data row (was Jane), age column
+        # Change a cell value with animation (Philippe's age: 26 -> 27)
+        cell = table.get_cell(1, 2)  # First data row, age column
         old_text = cell.text.copy()
-        cell.set_value("33")
+        cell.set_value("27")
         self.play(ReplacementTransform(old_text, cell.text))
         self.wait(1)
         
@@ -211,95 +207,6 @@ class TableColorScene(Scene):
         for table_copy in table_copies:
             self.play(FadeIn(table_copy), run_time=0.4)
         
-        self.wait(2)
-
-
-class TableColorResizePreservationScene(Scene):
-    """
-    Tests that cell colors (font, background, border) are preserved
-    when a new row with a long string triggers column resizing.
-    """
-    
-    def construct(self):
-        # Create a table with short initial values
-        table = Table([
-            ["Name", "Role", "Status"],
-            ["Alice", "Dev", "Active"],
-            ["Bob", "QA", "Inactive"],
-        ])
-        table.move_to(ORIGIN)
-        
-        # Apply various colors to the table
-        # 1. Header styling
-        table.set_header_background_color(BLUE, opacity=0.3)
-        table.set_header_font_color(WHITE)
-        
-        # 2. Column styling - set Status column to RED font
-        table.set_column_font_color(2, RED)  # Status column
-        
-        # 3. Individual cell styling
-        table.get_cell(1, 0).set_background_color(GREEN, opacity=0.2)  # Alice row, Name cell
-        table.get_cell(2, 1).set_border_color(YELLOW)  # Bob row, Role cell
-        table.get_cell(1, 1).set_font_color(BLUE)  # Alice row, Role cell
-        
-        # Show initial table
-        self.play(Write(table, run_time=2))
-        self.wait(1)
-        
-        # Flash around cells to highlight their colors
-        self.play(FlashAround(table.get_cell(1, 0), buff=0.1))  # Green background cell
-        self.wait(0.3)
-        self.play(FlashAround(table.get_cell(2, 1), buff=0.1))  # Yellow border cell
-        self.wait(0.3)
-        
-        # Add a new row with a VERY LONG string that will trigger column resizing
-        # This tests that colors are preserved when cells are resized
-        long_role = "Senior Principal Software Engineer Lead"
-        new_row, anims = table.add_row([
-            "Christopher", 
-            long_role,  # This will force the Role column to expand
-            "Active"
-        ])
-        
-        # Play all animations (resize + fade in new row)
-        self.play(AnimationGroup(*anims, lag_ratio=0.05))
-        self.wait(1)
-        
-        # Flash to verify colors are still applied after resize
-        # The Status column should still have RED font
-        self.play(FlashAround(table.get_column(2), buff=0.1))
-        self.wait(0.3)
-        
-        # Alice's Name cell should still have GREEN background
-        self.play(FlashAround(table.get_cell(1, 0), buff=0.1))
-        self.wait(0.3)
-        
-        # Bob's Role cell should still have YELLOW border
-        self.play(FlashAround(table.get_cell(2, 1), buff=0.1))
-        self.wait(0.3)
-        
-        # Header should still have BLUE background and WHITE font
-        self.play(FlashAround(table.header_row, buff=0.1))
-        self.wait(1)
-        
-        # Move table to verify integrity
-        self.play(table.animate.shift(LEFT * 2))
-        self.wait(0.3)
-        self.play(table.animate.shift(RIGHT * 4))
-        self.wait(0.3)
-        self.play(table.animate.move_to(ORIGIN))
-        self.wait(1)
-        
-        # Scale and copy to verify colors are preserved after copy
-        self.play(
-            table.animate.scale(0.5).to_corner(UL, buff=0.5)
-        )
-        self.wait(0.5)
-        
-        # Create copies to verify color preservation in copies
-        table_copy = table.copy()
-        table_copy.next_to(table, DOWN, buff=0.3)
-        self.play(FadeIn(table_copy))
         self.wait(2)
 
 
