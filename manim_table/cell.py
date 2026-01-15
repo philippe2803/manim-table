@@ -41,6 +41,12 @@ class Cell(VGroup):
         self.is_header = is_header
         self.show_border = show_border
         
+        # Store color properties for copying
+        self._font_color = None
+        self._background_color = None
+        self._background_opacity = 0.0
+        self._border_color = None
+        
         # Create invisible bounding box to enforce dimensions
         self.invisible_box = Rectangle(
             width=width,
@@ -131,13 +137,14 @@ class Cell(VGroup):
         """
         Create a copy of this cell with a new width.
         The copy is positioned at the same center as this cell.
+        Preserves font color, background color, and border color.
         Useful for animating width changes with Transform.
         
         Args:
             new_width: The new width for the cell
             
         Returns:
-            A new Cell with the same value but different width
+            A new Cell with the same value and styling but different width
         """
         new_cell = Cell(
             value=self.value,
@@ -148,6 +155,15 @@ class Cell(VGroup):
             show_border=self.show_border,
         )
         new_cell.move_to(self.get_center())
+        
+        # Copy styling colors
+        if self._font_color is not None:
+            new_cell.set_font_color(self._font_color)
+        if self._background_color is not None:
+            new_cell.set_background_color(self._background_color, self._background_opacity)
+        if self._border_color is not None:
+            new_cell.set_border_color(self._border_color)
+        
         return new_cell
     
     def resize_width(self, new_width: float):
@@ -185,6 +201,7 @@ class Cell(VGroup):
         Args:
             color: A manimlib color (e.g., RED, BLUE, "#FF0000")
         """
+        self._font_color = color  # Store for copying
         self.text.set_color(color)
         return self
     
@@ -195,6 +212,7 @@ class Cell(VGroup):
         Args:
             color: A manimlib color (e.g., RED, BLUE, "#FF0000")
         """
+        self._border_color = color  # Store for copying
         if self.border is not None:
             for line in self.border:
                 line.set_color(color)
@@ -209,6 +227,10 @@ class Cell(VGroup):
             color: A manimlib color (e.g., RED, BLUE, "#FF0000")
             opacity: Opacity of the background (0 to 1)
         """
+        # Store for copying
+        self._background_color = color
+        self._background_opacity = opacity
+        
         # Remove existing background if any
         if hasattr(self, 'background') and self.background is not None:
             self.remove(self.background)

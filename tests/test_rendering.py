@@ -9,6 +9,7 @@ SCENES = [
     "TableWithExplicitHeader",
     "BorderlessTable",
     "TableColorScene",
+    "TableColorResizePreservationScene",
     "TableColumnOperationsScene",
 ]
 

@@ -264,13 +264,65 @@ class Table(VGroup):
         Add a new row to the bottom of the table.
         
         Returns:
-            Tuple of (new_row, animations) where animations is a list of
-            FadeIn animations for animating the new row into view.
+            Tuple of (new_row, animations) where animations includes both:
+            - Resize transforms for existing cells (if column widths change)
+            - FadeIn for the new row cells
+            
+            All animations can be played together with AnimationGroup.
         
         Example:
             new_row, anims = table.add_row(["Alice", "Smith", "30"])
-            self.play(*anims)
+            self.play(AnimationGroup(*anims, lag_ratio=0.05))
         """
+        # First, add the new row values to internal tracking
+        self.row_values.append(values)
+        
+        # Check if we need to resize columns (before creating the row)
+        resize_animations = []
+        new_widths = self.column_widths  # Default to current widths
+        
+        if self.auto_fit:
+            new_widths = self.calculate_column_widths()
+            
+            # Check if any column width changed
+            width_changed = any(
+                abs(old_w - new_w) > 0.01 
+                for old_w, new_w in zip(self.column_widths, new_widths)
+            )
+            
+            if width_changed:
+                # Build resize animations for all existing rows
+                table_left = self.header_row.get_left()[0]
+                
+                # Create target cells for header
+                x_offset = table_left
+                for col_idx, new_w in enumerate(new_widths):
+                    target_x = x_offset + new_w / 2
+                    
+                    header_cell = self.header_row[col_idx]
+                    target_header = header_cell.get_resized_copy(new_w)
+                    target_header.move_to([target_x, header_cell.get_center()[1], 0])
+                    resize_animations.append(Transform(header_cell, target_header))
+                    
+                    x_offset += new_w
+                
+                # Create target cells for existing data rows
+                for row in self.rows:
+                    x_offset = table_left
+                    for col_idx, new_w in enumerate(new_widths):
+                        target_x = x_offset + new_w / 2
+                        
+                        cell = row[col_idx]
+                        target_cell = cell.get_resized_copy(new_w)
+                        target_cell.move_to([target_x, cell.get_center()[1], 0])
+                        resize_animations.append(Transform(cell, target_cell))
+                        
+                        x_offset += new_w
+                
+                # Update stored widths
+                self.column_widths = new_widths
+        
+        # Now create the new row with the updated column widths
         index = len(self.rows) + 1
         new_row = Row(
             values=values,
@@ -282,24 +334,37 @@ class Table(VGroup):
             index=index,
         )
         
-        # Position below last row
-        if len(self.rows) > 0:
-            new_row.next_to(self.rows[-1], DOWN, buff=0)
-        else:
-            new_row.next_to(self.header_row, DOWN, buff=0)
+        # Position the new row cells at correct positions
+        table_left = self.header_row.get_left()[0]
         
-        self.row_values.append(values)
+        # Calculate y position: below the last row (or header if no rows)
+        if len(self.rows) > 0:
+            y_pos = self.rows[-1].get_bottom()[1] - self.cell_height / 2
+        else:
+            y_pos = self.header_row.get_bottom()[1] - self.cell_height / 2
+        
+        # Position each cell at the correct x based on new column widths
+        x_offset = table_left
+        for col_idx, width in enumerate(self.column_widths):
+            cell = new_row.cells[col_idx]
+            target_x = x_offset + width / 2
+            cell.move_to([target_x, y_pos, 0])
+            x_offset += width
+        
+        # Add to table structure
         self.rows.append(new_row)
         self.add(new_row)
         
-        # Return animations for each cell to fade in
-        animations = [FadeIn(cell) for cell in new_row.cells]
-        return new_row, animations
+        # Combine all animations: resize first, then fade in new row
+        appear_animations = [FadeIn(cell) for cell in new_row.cells]
+        all_animations = resize_animations + appear_animations
+        
+        return new_row, all_animations
     
     def delete_row(
         self, 
         index: int
-    ) -> Tuple[Row, List, List]:
+    ) -> Tuple[Row, List]:
         """
         Delete a row from the table.
         
@@ -307,16 +372,16 @@ class Table(VGroup):
             index: Row index (1-indexed, i.e., header is 0, first data row is 1)
         
         Returns:
-            Tuple of (deleted_row, shift_animations, resize_animations) where:
-            - shift_animations move remaining rows up
-            - resize_animations resize columns if the deleted row had the longest value
+            Tuple of (deleted_row, animations) where animations includes:
+            - FadeOut for the deleted row
+            - Shift animations for remaining rows
+            - Resize animations if column widths change
+            
+            All animations can be played together with AnimationGroup.
         
         Example:
-            deleted, shift_anims, resize_anims = table.delete_row(1)
-            self.play(FadeOut(deleted))
-            self.play(*shift_anims)
-            if resize_anims:
-                self.play(*resize_anims)
+            deleted, anims = table.delete_row(1)
+            self.play(AnimationGroup(*anims, lag_ratio=0.05))
         """
         if index == 0:
             raise ValueError("Cannot delete header row")
@@ -335,16 +400,20 @@ class Table(VGroup):
         # Track which rows will be shifted (rows at and after the deleted index)
         rows_to_shift = set(self.rows[data_index:])
         
+        # Calculate actual rendered height (accounts for table scaling)
+        actual_height = deleted_row.get_height()
+        
+        # Start with FadeOut for deleted row
+        all_animations = [FadeOut(deleted_row)]
+        
         # Create shift-up animations for remaining rows
-        shift_animations = []
         for row in rows_to_shift:
-            shift_animations.append(
-                row.animate.shift([0, self.cell_height, 0])
+            all_animations.append(
+                row.animate.shift([0, actual_height, 0])
             )
             row.index -= 1
         
         # Recalculate column widths if auto_fit is enabled
-        resize_animations = []
         if self.auto_fit:
             new_widths = self.calculate_column_widths()
             
@@ -369,7 +438,7 @@ class Table(VGroup):
                     target_header = header_cell.get_resized_copy(new_w)
                     # Position at target x, same y
                     target_header.move_to([target_x, header_cell.get_center()[1], 0])
-                    resize_animations.append(Transform(header_cell, target_header))
+                    all_animations.append(Transform(header_cell, target_header))
                     
                     x_offset += new_w
                 
@@ -387,14 +456,14 @@ class Table(VGroup):
                         # Use the y position AFTER shift would complete
                         target_y = cell.get_center()[1] + y_shift
                         target_cell.move_to([target_x, target_y, 0])
-                        resize_animations.append(Transform(cell, target_cell))
+                        all_animations.append(Transform(cell, target_cell))
                         
                         x_offset += new_w
                 
                 # Update stored widths
                 self.column_widths = new_widths
         
-        return deleted_row, shift_animations, resize_animations
+        return deleted_row, all_animations
     
     def add_column(
         self,
@@ -535,9 +604,12 @@ class Table(VGroup):
         self.header_row.remove(header_cell) # Remove from VGroup
         deleted_cells.append(header_cell)
         
+        # Calculate actual rendered width (accounts for table scaling)
+        actual_width = header_cell.get_width()
+        
         # Shift remaining cells left
         for cell in self.header_row.cells[index:]:
-            shift_animations.append(cell.animate.shift(LEFT * col_width))
+            shift_animations.append(cell.animate.shift(LEFT * actual_width))
             
         # 2. Data Rows
         for row in self.rows:
@@ -546,7 +618,7 @@ class Table(VGroup):
             deleted_cells.append(cell)
             
             for c in row.cells[index:]:
-                shift_animations.append(c.animate.shift(LEFT * col_width))
+                shift_animations.append(c.animate.shift(LEFT * actual_width))
                 
         deleted_group = VGroup(*deleted_cells)
         
