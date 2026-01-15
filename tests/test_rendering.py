@@ -10,6 +10,7 @@ SCENES = [
     "BorderlessTable",
     "TableColorScene",
     "TableColorResizePreservationScene",
+    "TableScaledResizeScene",
     "TableColumnOperationsScene",
 ]
 

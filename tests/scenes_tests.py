@@ -303,10 +303,89 @@ class TableColorResizePreservationScene(Scene):
         self.wait(2)
 
 
+class TableScaledResizeScene(Scene):
+    """
+    Tests that table operations preserve scale AND colors when the table is scaled.
+    Includes multiple rows, colors, and 4 deletion operations (one triggers resize).
+    """
+    
+    def construct(self):
+        # Create a table with more rows
+        table = Table([
+            ["Name", "Role", "Status"],
+            ["Alice", "Developer", "Active"],
+            ["Bob", "QA Engineer", "Inactive"],
+            ["Charlie", "DevOps Lead", "Active"],
+            ["Diana", "Product Manager", "Active"],
+            ["VerylongfirstnameCharacter", "Principal Architect", "Active"],  # Long name for resize test
+            ["Frank", "Designer", "Inactive"],
+        ])
+        table.move_to(ORIGIN)
+        
+        # Apply colors
+        table.set_header_background_color(BLUE, opacity=0.3)
+        table.set_header_font_color(WHITE)
+        table.set_column_font_color(2, RED)  # Status column in red
+        table.get_cell(1, 0).set_background_color(GREEN, opacity=0.2)  # Alice row
+        table.get_cell(3, 1).set_border_color(YELLOW)  # Charlie's role
+        
+        # Show initial table
+        self.play(Write(table, run_time=1.5))
+        self.wait(0.5)
+        
+        # Scale the table down
+        self.play(table.animate.scale(0.5))
+        self.wait(0.5)
+        
+        # Delete row 1 (Alice) - should preserve colors on remaining cells
+        deleted, anims = table.delete_row(1)
+        self.play(AnimationGroup(*anims, lag_ratio=0.05))
+        self.wait(0.3)
+        
+        # Add a row BEFORE resize to test add_row on scaled table
+        new_row1, anims = table.add_row(["Eve", "Intern", "Active"])
+        self.play(AnimationGroup(*anims, lag_ratio=0.05))
+        self.wait(0.3)
+        
+        # Delete row 2 (was Charlie, now Diana) 
+        deleted, anims = table.delete_row(2)
+        self.play(AnimationGroup(*anims, lag_ratio=0.05))
+        self.wait(0.3)
+        
+        # Delete row 3 (was VerylongfirstnameCharacter) - THIS triggers resize!
+        # The long name was the widest, so deleting it should shrink the Name column
+        deleted, anims = table.delete_row(3)
+        self.play(AnimationGroup(*anims, lag_ratio=0.05))
+        self.wait(0.3)
+        
+        # Delete row 1 again (was Bob)
+        deleted, anims = table.delete_row(1)
+        self.play(AnimationGroup(*anims, lag_ratio=0.05))
+        self.wait(0.5)
+        
+        # Move the table to verify everything is properly attached after deletions
+        self.play(table.animate.shift(LEFT * 2))
+        self.wait(0.2)
+        self.play(table.animate.shift(RIGHT * 4))
+        self.wait(0.2)
+        self.play(table.animate.move_to(ORIGIN))
+        self.wait(0.5)
+        
+        # Add a row - should also work at the current scale with colors preserved
+        new_row, anims = table.add_row(["Grace", "Senior Developer", "Active"])
+        self.play(AnimationGroup(*anims, lag_ratio=0.05))
+        self.wait(0.5)
+        
+        # Final move to verify integrity
+        self.play(table.animate.shift(UP))
+        self.wait(1)
+
+
 class TableColumnOperationsScene(Scene):
     """
     Demonstrates adding and deleting columns.
     """
+
     
     def construct(self):
         # Create initial table
