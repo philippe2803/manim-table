@@ -2,6 +2,14 @@
 
 <!-- version list -->
 
+## v1.1.1 (2026-01-15)
+
+### Bug Fixes
+
+- Resize fix due to scaling not properly apply to background
+  ([`84a40cb`](https://github.com/philippe2803/manim-table/commit/84a40cb9114be1d1c5dab4b5582c003d1174ef6d))
+
+
 ## v1.1.0 (2026-01-15)
 
 ### Features
