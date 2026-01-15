@@ -137,15 +137,20 @@ class Cell(VGroup):
         """
         Create a copy of this cell with a new width.
         The copy is positioned at the same center as this cell.
-        Preserves font color, background color, and border color.
+        Preserves font color, background color, border color, and current scale.
         Useful for animating width changes with Transform.
         
         Args:
-            new_width: The new width for the cell
+            new_width: The new width for the cell (in unscaled units)
             
         Returns:
-            A new Cell with the same value and styling but different width
+            A new Cell with the same value and styling but different width,
+            scaled to match the current cell's scale
         """
+        # Calculate current scale factor using HEIGHT (stable during width resize)
+        # Width-based calculation fails after Transform morphs the cell
+        scale_factor = self.get_height() / self.cell_height if self.cell_height > 0 else 1.0
+        
         new_cell = Cell(
             value=self.value,
             width=new_width,
@@ -154,15 +159,20 @@ class Cell(VGroup):
             is_header=self.is_header,
             show_border=self.show_border,
         )
-        new_cell.move_to(self.get_center())
         
-        # Copy styling colors
+        # Copy styling colors BEFORE scaling so they get scaled too
         if self._font_color is not None:
             new_cell.set_font_color(self._font_color)
         if self._background_color is not None:
             new_cell.set_background_color(self._background_color, self._background_opacity)
         if self._border_color is not None:
             new_cell.set_border_color(self._border_color)
+        
+        # Apply the same scale to match the current cell's scale
+        if abs(scale_factor - 1.0) > 0.001:
+            new_cell.scale(scale_factor)
+        
+        new_cell.move_to(self.get_center())
         
         return new_cell
     

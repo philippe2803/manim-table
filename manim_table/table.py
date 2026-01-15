@@ -277,6 +277,11 @@ class Table(VGroup):
         # First, add the new row values to internal tracking
         self.row_values.append(values)
         
+        # Calculate scale factor using HEIGHT (stable during width resize)
+        # Width-based calculation fails after Transform morphs cells
+        first_header_cell = self.header_row[0]
+        scale_factor = first_header_cell.get_height() / self.cell_height if self.cell_height > 0 else 1.0
+        
         # Check if we need to resize columns (before creating the row)
         resize_animations = []
         new_widths = self.column_widths  # Default to current widths
@@ -297,27 +302,43 @@ class Table(VGroup):
                 # Create target cells for header
                 x_offset = table_left
                 for col_idx, new_w in enumerate(new_widths):
-                    target_x = x_offset + new_w / 2
-                    
                     header_cell = self.header_row[col_idx]
                     target_header = header_cell.get_resized_copy(new_w)
+                    
+                    # Use scaled width for positioning
+                    scaled_w = target_header.get_width()
+                    target_x = x_offset + scaled_w / 2
                     target_header.move_to([target_x, header_cell.get_center()[1], 0])
                     resize_animations.append(Transform(header_cell, target_header))
                     
-                    x_offset += new_w
+                    # Update cell's internal width to match new width
+                    header_cell.cell_width = new_w
+                    
+                    x_offset += scaled_w
+                
+                # Update header row's cell_widths list
+                self.header_row.cell_widths = list(new_widths)
                 
                 # Create target cells for existing data rows
                 for row in self.rows:
                     x_offset = table_left
                     for col_idx, new_w in enumerate(new_widths):
-                        target_x = x_offset + new_w / 2
-                        
                         cell = row[col_idx]
                         target_cell = cell.get_resized_copy(new_w)
+                        
+                        # Use scaled width for positioning
+                        scaled_w = target_cell.get_width()
+                        target_x = x_offset + scaled_w / 2
                         target_cell.move_to([target_x, cell.get_center()[1], 0])
                         resize_animations.append(Transform(cell, target_cell))
                         
-                        x_offset += new_w
+                        # Update cell's internal width to match new width
+                        cell.cell_width = new_w
+                        
+                        x_offset += scaled_w
+                    
+                    # Update row's cell_widths list
+                    row.cell_widths = list(new_widths)
                 
                 # Update stored widths
                 self.column_widths = new_widths
@@ -334,22 +355,30 @@ class Table(VGroup):
             index=index,
         )
         
-        # Position the new row cells at correct positions
+        # Scale the new row to match the table's current scale
+        if abs(scale_factor - 1.0) > 0.001:
+            new_row.scale(scale_factor)
+        
+        # Position the new row cells at correct positions using actual rendered dimensions
         table_left = self.header_row.get_left()[0]
         
-        # Calculate y position: below the last row (or header if no rows)
+        # Calculate y position using actual rendered height
         if len(self.rows) > 0:
-            y_pos = self.rows[-1].get_bottom()[1] - self.cell_height / 2
+            actual_height = self.rows[-1].get_height()
+            y_pos = self.rows[-1].get_bottom()[1] - actual_height / 2
         else:
-            y_pos = self.header_row.get_bottom()[1] - self.cell_height / 2
+            actual_height = self.header_row.get_height()
+            y_pos = self.header_row.get_bottom()[1] - actual_height / 2
         
-        # Position each cell at the correct x based on new column widths
+        # Position each cell at the correct x based on actual rendered widths
         x_offset = table_left
-        for col_idx, width in enumerate(self.column_widths):
+        for col_idx in range(len(self.column_widths)):
             cell = new_row.cells[col_idx]
-            target_x = x_offset + width / 2
+            # Use actual rendered width of the cell
+            cell_width = cell.get_width()
+            target_x = x_offset + cell_width / 2
             cell.move_to([target_x, y_pos, 0])
-            x_offset += width
+            x_offset += cell_width
         
         # Add to table structure
         self.rows.append(new_row)
@@ -428,37 +457,56 @@ class Table(VGroup):
                 # Target positions start from the header's current left edge
                 table_left = self.header_row.get_left()[0]
                 
+                # Calculate actual rendered height (accounts for scale)
+                actual_row_height = self.header_row.get_height()
+                
                 # Create target cells for header
                 x_offset = table_left
                 for col_idx, new_w in enumerate(new_widths):
-                    # Target center for this column
-                    target_x = x_offset + new_w / 2
-                    
                     header_cell = self.header_row[col_idx]
                     target_header = header_cell.get_resized_copy(new_w)
-                    # Position at target x, same y
+                    
+                    # Use scaled width for positioning
+                    scaled_w = target_header.get_width()
+                    target_x = x_offset + scaled_w / 2
                     target_header.move_to([target_x, header_cell.get_center()[1], 0])
                     all_animations.append(Transform(header_cell, target_header))
                     
-                    x_offset += new_w
+                    # Update cell's internal width to match new width
+                    header_cell.cell_width = new_w
+                    
+                    x_offset += scaled_w
+                
+                # Update header row's cell_widths list
+                self.header_row.cell_widths = list(new_widths)
                 
                 # Create target cells for data rows
                 for row in self.rows:
                     x_offset = table_left
                     # Calculate the y-offset: if this row was shifted, use shifted position
-                    y_shift = self.cell_height if row in rows_to_shift else 0
+                    # Use actual rendered height instead of stored unscaled cell_height
+                    y_shift = actual_height if row in rows_to_shift else 0
                     
                     for col_idx, new_w in enumerate(new_widths):
-                        target_x = x_offset + new_w / 2
-                        
                         cell = row[col_idx]
                         target_cell = cell.get_resized_copy(new_w)
+                        
+                        # Use scaled width for positioning
+                        scaled_w = target_cell.get_width()
+                        target_x = x_offset + scaled_w / 2
+                        
                         # Use the y position AFTER shift would complete
                         target_y = cell.get_center()[1] + y_shift
                         target_cell.move_to([target_x, target_y, 0])
                         all_animations.append(Transform(cell, target_cell))
                         
-                        x_offset += new_w
+                        # Update cell's internal width to match new width
+                        cell.cell_width = new_w
+                        
+                        x_offset += scaled_w
+                    
+                    # Update row's cell_widths list
+                    row.cell_widths = list(new_widths)
                 
                 # Update stored widths
                 self.column_widths = new_widths
